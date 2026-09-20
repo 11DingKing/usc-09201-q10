@@ -1,15 +1,24 @@
 import http from 'node:http';
 
+import { createHttpHandler } from './app/http.mjs';
+import { initStore, loadStore, saveStore } from './app/store.mjs';
+
 export function createServer() {
-  return http.createServer((request, response) => {
-    if (request.method === 'GET' && request.url === '/health') {
-      response.writeHead(200, { 'content-type': 'application/json; charset=utf-8' });
-      response.end(JSON.stringify({ status: 'ok' }));
-      return;
-    }
-    response.writeHead(404, { 'content-type': 'application/json; charset=utf-8' });
-    response.end(JSON.stringify({ error: 'not_found' }));
-  });
+  const file = process.env.STORE_FILE || 'data/ledger.json';
+  const adminId = process.env.ADMIN_ID || 'A1';
+  const adminName = process.env.ADMIN_NAME || '系统管理员';
+
+  let data = loadStore(file);
+  if (!data) {
+    initStore(file, { bootstrapUsers: [{ userId: adminId, name: adminName, role: 'admin', groupIds: [] }] });
+    data = loadStore(file);
+  }
+  const { users, service } = data;
+
+  const persist = () => saveStore(file, { users, service });
+  const handler = createHttpHandler(service, { afterCommand: persist });
+
+  return http.createServer(handler);
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

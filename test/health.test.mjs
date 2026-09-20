@@ -1,6 +1,11 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { createServer } from '../src/server.mjs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+// 隔离持久化文件，避免健康检查在仓库内产生数据目录
+process.env.STORE_FILE ??= join(tmpdir(), `linong-health-${process.pid}.json`);
+const { createServer } = await import('../src/server.mjs');
 
 test('健康检查返回可用状态', async (context) => {
   const server = createServer();
